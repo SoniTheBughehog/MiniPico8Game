@@ -1,0 +1,27 @@
+# --- PICO-8 Generated Files ---
+*.p8.png
+*.p8.rom
+*.png
+*.wav
+*.bin
+*.exe
+*.zip
+
+# Exports (HTML, binaire)
+*.html
+export/
+
+# Build tools output
+build/
+dist/
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Lua backups
+*.bak
