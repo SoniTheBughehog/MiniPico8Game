@@ -1,36 +1,106 @@
 pico-8 cartridge // http://www.pico-8.com
 version 43
 __lua__
+
 function _init()
-	p={x=60,
-				y=90,
-				speed=2,
-				life=3
-			}
-	game={score=0,lose=false}
+	state=0
+	scoreboard={}
+end
+
+function init_game()
+	state=2
 	bullets={}
 	explosions={}
 	enemies={}
 	create_stars()
 	spawn_enemies(1)
+	timerb=0
+	p={x=60,
+				y=90,
+				speed=1.5,
+				bspeed=2,
+				life=3
+			}
+	score=0
+end
+
+function move_player()
+	 if (btn(➡️) and p.x<120) p.x+=p.speed
+	 if (btn(⬆️) and p.y>0) p.y-=p.speed
+	 if (btn(⬅️) and p.x>0) p.x-=p.speed
+	 if (btn(⬇️) and p.y<120) p.y+=p.speed
 end
 
 function _update60()
-	if not game.lose then
-	 if (btn(➡️)) p.x+=p.speed
-	 if (btn(⬆️)) p.y-=p.speed
-	 if (btn(⬅️)) p.x-=p.speed
-	 if (btn(⬇️)) p.y+=p.speed
-	 if (btnp(❎)) shoot()
+	if (state==0) update_menu()
+	if (state==1) update_score()
+	if (state==2) update_game()
+	if (state==3) update_over()
+end
+
+function update_menu()
+	if (btnp(❎)) init_game()
+	if (btnp(🅾️)) state=1
+end
+
+
+function update_score()
+	if (btnp(❎)) state=0
+end
+
+function update_game()
+
+		move_player()
+	 
+	 timerb+=1
+	 if btn(❎) then
+	 	if timerb>=(30/p.bspeed) then
+	 		timerb=0
+	 		shoot()
+	 	end
+	 end
+	 
 		update_bullets()
 		update_stars()
 		update_enemies()
-	end
-	update_explosions()
+		update_medium()
+		update_big()
+		update_explosions()
+end
+
+
+function update_over()
+	if (btnp(❎)) state=0
+	if (btnp(🅾️)) state=1
 end
 
 function _draw()
 	cls()
+	if (state==0) draw_menu()
+	if (state==1) draw_score()
+	if (state==2) draw_game()
+	if (state==3) draw_over()
+
+end
+
+function draw_menu()
+	print("start game (❎)",32,60,7)
+	print("scoreboard (🅾️)",32,70,7)
+end
+
+
+function draw_score()
+	print("scoreboard",32,10,7)
+	if (#scoreboard==0) then
+		print("pas de score",32,60,7)
+	end
+	for i,score in ipairs(scoreboard) do
+		print("#"..i..": "..score,32,(i*20),7)
+	end
+	print("back(❎)",2,120,7)
+end
+
+function draw_game()
 	--stars
 	for s in all(stars) do
 		pset(s.x,s.y,s.col)
@@ -39,7 +109,6 @@ function _draw()
 	if p.life > 0 then
 		spr(1,p.x,p.y)
 	end
-		
 	--enemies
 	for e in all(enemies) do
 		spr(3,e.x,e.y)
@@ -49,15 +118,28 @@ function _draw()
 		spr(2,b.x,b.y)
 	end
 	
+	draw_medium()
+	draw_big()
 	draw_explosions()
 	
-	print("score:"..game.score,2,2,7)
-	print("vie:"..p.life,2,9,7)
+	print("score:"..score,2,2,7)
+	for l=1,p.life do
+		spr(4,1+((l-1)*9),9)
+	end
+end
+
+
+function draw_over()
+
+	print("back to menu (❎)",32,60,7)
+	print("scoreboard (🅾️)",32,70,7)
+
 end
 -->8
 --bullets
 
 function shoot()
+	
 	new_bullet={
 		x=p.x,
 		y=p.y,
@@ -74,8 +156,10 @@ function update_bullets()
 end
 
 -->8
---stars
+--sfx
 
+
+--stars
 function create_stars()
 	stars={}
 	for i=1,25 do
@@ -98,77 +182,7 @@ function update_stars()
 		end
 	end
 end
--->8
---enemies
 
-function spawn_enemies(amount)
-	for i=1,amount do
-		new_enemie={
-			x=20+rnd(68),
-			y=-20-rnd(30),
-			speed=0.3,
-			life=4
-		}
-		add(enemies,new_enemie)
-	end
-end
-
-function update_enemies()
-	for e in all(enemies) do
-		e.y+=e.speed
-		
-		--player
-		if collision(e,p) then
-			p.life-=1
-			e.life=0
-			create_explosions(e.x+4,e.y+4)
-			create_explosions(p.x+4,p.y+4)
-		end
-		if p.life == 0 then
-			create_explosions(p.x,p.y)
-			game.lose=true
-		end
-		--colision
-			for b in all(bullets) do
-				if collision(e,b) then
-					del(bullets,b)
-					create_explosions(e.x+4,e.y+4)
-					e.life-=1
-				end
-			end
-		
-		--score
-			if e.life == 0 then
-				del(enemies,e)
-				game.score+=1
-			end	
-			
-		--dead
-		if e.y > 128 then
-			del(enemies,e)
-		end
-		
-		
-	end
-	if #enemies==0 then
-		spawn_enemies(game.score/5+1)
-	end
-end
--->8
---collision
-
-function collision(a,b)
-	if a.x>b.x+8
-	or a.y>b.y+8
-	or a.x+8<b.x
-	or a.y+8<b.y 
-	then
-		return false
-	else
-		return true
-	end
-end
--->8
 -- explosions
 
 function create_explosions(_x,_y)
@@ -193,14 +207,178 @@ function draw_explosions()
 							8+e.timer%3)
 	end
 end
+-->8
+--enemies
+
+function spawn_enemies(amount)
+	for i=1,amount do
+		new_enemie={
+			x=8+rnd(110),
+			y=-20-rnd(30),
+			speed=0.3,
+			life=4
+		}
+		add(enemies,new_enemie)
+	end
+end
+
+function update_enemies()
+	for e in all(enemies) do
+		e.y+=e.speed
+		
+		--player
+		if collision(e,p) then
+			p.life-=1
+			e.life=0
+			create_explosions(e.x+4,e.y+4)
+			create_explosions(p.x+4,p.y+4)
+		end
+		if p.life == 0 then
+			insert_new_score()
+			state=3
+		end
+		--colision
+			for b in all(bullets) do
+				if collision(e,b) then
+					del(bullets,b)
+					create_explosions(e.x+4,e.y+4)
+					e.life-=1
+				end
+			end
+		
+		--score
+			if e.life == 0 then
+				del(enemies,e)
+				score+=100
+			end	
+			
+		--dead
+		if e.y > 128 then
+			del(enemies,e)
+		end
+		
+		
+	end
+	if #enemies<score/500 and #enemies<10 then
+		spawn_enemies(score/500+1)
+	end
+end
+
+
+function insert_new_score()
+	local inserted = false
+ for i=1, #scoreboard do
+  if score > scoreboard[i] then
+ 	 add(scoreboard, score, i) -- insれそre le score れき la position i
+   inserted = true
+   break
+  end
+ end
+
+ if (not inserted and #scoreboard < 5) add(scoreboard, score)
+
+ while #scoreboard > 5 do
+ 	deli(scoreboard, 6)
+ end
+ score=0
+end
+-->8
+--collision
+
+function collision(a,b)
+	if a.x>b.x+8
+	or a.y>b.y+8
+	or a.x+8<b.x
+	or a.y+8<b.y 
+	then
+		return false
+	else
+		return true
+	end
+end
+-->8
+--bonus
+
+function init_bonus()
+	bonus_speed={}
+	bonus_shoot={}
+	bonus_dmg={}
+end
+
+function update_bonus()
+
+end
+
+function apply_bonus()
+
+end
+
+function draw_bonus()
+
+end
+-->8
+--medium enemies
+
+function init_medium()
+	medium={}
+	bulletm={}
+end
+
+function update_medium()
+
+end
+
+function shootm()
+
+end
+
+function draw_medium()
+
+end
+-->8
+--big enemies
+
+
+function init_big()
+	big={}
+	bulletb={}
+end
+
+function update_big()
+
+end
+
+function shootb()
+
+end
+
+function draw_big()
+
+end
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000c700000a00a0000900900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0070070000cccc0000a00a0000555500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000770000055560000a00a0005588650000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000055555600000000005555560000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-007007005555555600a00a0005855860000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000008a00a800090090005000050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000c700000a00a0000900900001001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0070070000cccc0000a00a0000555500012112100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000770000055560000a00a0005588650122222210000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000055555600000000005555560122222210000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+007007005555555600a00a0005855860012222100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000008a00a800090090005000050001221000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000055000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000080080055555555000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000e00e00055c7550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000055cc550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000e00e0000888800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000e00e0000288200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000e00e0000088000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000066000066000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000066600666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000800e0006555560000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000008e000005c7500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000e8000005cc500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000e0080002555520000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000002200220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __label__
 00000000000000000000000000000000000000000000500000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
